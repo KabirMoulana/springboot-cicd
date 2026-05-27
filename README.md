@@ -1,4 +1,4 @@
-## springboot-cicd 🚀
+# springboot-cicd 🚀
 
 A production-ready **Java 21 / Spring Boot 3** REST API with a full **5-stage GitHub Actions CI/CD pipeline** including testing, OWASP security scanning, Docker build, staging deploy, and blue/green production deploy.
 
