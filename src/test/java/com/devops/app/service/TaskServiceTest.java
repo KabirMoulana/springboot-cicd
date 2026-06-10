@@ -16,7 +16,6 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 
-import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
@@ -29,6 +28,7 @@ import static org.mockito.Mockito.*;
 class TaskServiceTest {
 
     @Mock TaskRepository taskRepository;
+    @Mock TaskEventPublisher eventPublisher;
     @InjectMocks TaskService taskService;
 
     private Task sampleTask;
@@ -43,7 +43,6 @@ class TaskServiceTest {
     @DisplayName("findById")
     class FindById {
         @Test
-        @DisplayName("returns TaskResponse when task exists")
         void returnsResponseWhenExists() {
             when(taskRepository.findById(1L)).thenReturn(Optional.of(sampleTask));
             TaskResponse response = taskService.findById(1L);
@@ -52,7 +51,6 @@ class TaskServiceTest {
         }
 
         @Test
-        @DisplayName("throws TaskNotFoundException when task missing")
         void throwsWhenMissing() {
             when(taskRepository.findById(99L)).thenReturn(Optional.empty());
             assertThatThrownBy(() -> taskService.findById(99L))
@@ -65,13 +63,13 @@ class TaskServiceTest {
     @DisplayName("create")
     class Create {
         @Test
-        @DisplayName("saves and returns new task")
-        void savesAndReturns() {
+        void savesAndPublishesEvent() {
             TaskRequest req = new TaskRequest("New Task", "Desc", Task.TaskStatus.TODO, Task.Priority.HIGH);
             when(taskRepository.save(any(Task.class))).thenReturn(sampleTask);
             TaskResponse response = taskService.create(req);
             assertThat(response).isNotNull();
             verify(taskRepository, times(1)).save(any(Task.class));
+            verify(eventPublisher, times(1)).onTaskCreated(any(Task.class));
         }
     }
 
@@ -79,18 +77,24 @@ class TaskServiceTest {
     @DisplayName("update")
     class Update {
         @Test
-        @DisplayName("updates existing task fields")
-        void updatesFields() {
+        void updatesAndPublishesCompletedEventWhenDone() {
             TaskRequest req = new TaskRequest("Updated", "New desc", Task.TaskStatus.DONE, Task.Priority.LOW);
             when(taskRepository.findById(1L)).thenReturn(Optional.of(sampleTask));
             when(taskRepository.save(any(Task.class))).thenAnswer(inv -> inv.getArgument(0));
-            TaskResponse response = taskService.update(1L, req);
-            assertThat(response.title()).isEqualTo("Updated");
-            assertThat(response.status()).isEqualTo(Task.TaskStatus.DONE);
+            taskService.update(1L, req);
+            verify(eventPublisher, times(1)).onTaskCompleted(1L);
         }
 
         @Test
-        @DisplayName("throws TaskNotFoundException when updating missing task")
+        void doesNotPublishCompletedWhenStatusNotDone() {
+            TaskRequest req = new TaskRequest("Updated", "Desc", Task.TaskStatus.IN_PROGRESS, Task.Priority.LOW);
+            when(taskRepository.findById(1L)).thenReturn(Optional.of(sampleTask));
+            when(taskRepository.save(any(Task.class))).thenAnswer(inv -> inv.getArgument(0));
+            taskService.update(1L, req);
+            verify(eventPublisher, never()).onTaskCompleted(anyLong());
+        }
+
+        @Test
         void throwsWhenMissing() {
             when(taskRepository.findById(99L)).thenReturn(Optional.empty());
             TaskRequest req = new TaskRequest("X", null, Task.TaskStatus.TODO, Task.Priority.LOW);
@@ -103,19 +107,19 @@ class TaskServiceTest {
     @DisplayName("delete")
     class Delete {
         @Test
-        @DisplayName("deletes existing task")
-        void deletesExisting() {
+        void deletesAndPublishesEvent() {
             when(taskRepository.existsById(1L)).thenReturn(true);
             taskService.delete(1L);
             verify(taskRepository).deleteById(1L);
+            verify(eventPublisher, times(1)).onTaskDeleted(1L);
         }
 
         @Test
-        @DisplayName("throws when deleting missing task")
         void throwsWhenMissing() {
             when(taskRepository.existsById(99L)).thenReturn(false);
             assertThatThrownBy(() -> taskService.delete(99L))
                 .isInstanceOf(TaskNotFoundException.class);
+            verify(eventPublisher, never()).onTaskDeleted(anyLong());
         }
     }
 
@@ -123,7 +127,6 @@ class TaskServiceTest {
     @DisplayName("findAll")
     class FindAll {
         @Test
-        @DisplayName("returns paged response")
         void returnsPagedResponse() {
             PageRequest pageable = PageRequest.of(0, 10);
             when(taskRepository.findAll(pageable)).thenReturn(new PageImpl<>(List.of(sampleTask)));
