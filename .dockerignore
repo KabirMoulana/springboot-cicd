@@ -1,0 +1,25 @@
+# Git
+.git
+.gitignore
+
+# Build artifacts
+target/
+
+# IDE
+.idea/
+*.iml
+*.iws
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Docs
+*.md
+docs/
+
+# CI
+.github/
+
+# Tests (don't need in image)
+src/test/
