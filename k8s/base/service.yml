@@ -1,0 +1,17 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: springboot-cicd
+  namespace: springboot-cicd
+  labels:
+    app.kubernetes.io/name: springboot-cicd
+    app.kubernetes.io/component: backend
+spec:
+  selector:
+    app: springboot-cicd
+  ports:
+    - name: http
+      port: 80
+      targetPort: 8080
+      protocol: TCP
+  type: ClusterIP
