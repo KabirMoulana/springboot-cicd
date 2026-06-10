@@ -1,0 +1,10 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "springboot-cicd.fullname" . }}-config
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "springboot-cicd.labels" . | nindent 4 }}
+data:
+  SPRING_PROFILES_ACTIVE: {{ .Values.env.SPRING_PROFILES_ACTIVE | quote }}
+  SERVER_PORT: {{ .Values.service.targetPort | quote }}
