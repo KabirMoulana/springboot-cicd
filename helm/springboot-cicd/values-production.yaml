@@ -1,0 +1,38 @@
+replicaCount: 3
+
+image:
+  tag: "latest"
+  pullPolicy: IfNotPresent
+
+autoscaling:
+  enabled: true
+  minReplicas: 3
+  maxReplicas: 15
+  targetCPUUtilizationPercentage: 65
+  targetMemoryUtilizationPercentage: 75
+
+ingress:
+  hosts:
+    - host: api.springboot-cicd.example.com
+      paths:
+        - path: /
+          pathType: Prefix
+
+env:
+  SPRING_PROFILES_ACTIVE: prod
+
+resources:
+  limits:
+    cpu: 1000m
+    memory: 768Mi
+  requests:
+    cpu: 250m
+    memory: 384Mi
+
+podDisruptionBudget:
+  enabled: true
+  minAvailable: 2
+
+externalSecret:
+  enabled: true
+  secretName: prod-app-secrets
