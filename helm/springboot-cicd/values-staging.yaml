@@ -1,0 +1,36 @@
+replicaCount: 1
+
+image:
+  tag: "latest"
+
+autoscaling:
+  enabled: true
+  minReplicas: 1
+  maxReplicas: 3
+  targetCPUUtilizationPercentage: 80
+
+ingress:
+  hosts:
+    - host: staging-api.springboot-cicd.example.com
+      paths:
+        - path: /
+          pathType: Prefix
+  tls:
+    - secretName: staging-springboot-cicd-tls
+      hosts:
+        - staging-api.springboot-cicd.example.com
+
+env:
+  SPRING_PROFILES_ACTIVE: staging
+
+resources:
+  limits:
+    cpu: 250m
+    memory: 384Mi
+  requests:
+    cpu: 50m
+    memory: 192Mi
+
+externalSecret:
+  enabled: true
+  secretName: staging-app-secrets
