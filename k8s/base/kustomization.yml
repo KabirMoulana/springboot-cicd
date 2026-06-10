@@ -6,6 +6,7 @@ namespace: springboot-cicd
 resources:
   - namespace.yml
   - serviceaccount.yml
+  - rbac.yml
   - configmap.yml
   - secret.yml
   - deployment.yml
@@ -13,6 +14,7 @@ resources:
   - ingress.yml
   - hpa.yml
   - pdb.yml
+  - networkpolicy.yml
 
 commonLabels:
   app.kubernetes.io/name: springboot-cicd
