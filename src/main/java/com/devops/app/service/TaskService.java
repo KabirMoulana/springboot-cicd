@@ -23,10 +23,13 @@ import java.util.stream.Collectors;
 public class TaskService {
 
     private static final Logger log = LoggerFactory.getLogger(TaskService.class);
-    private final TaskRepository taskRepository;
 
-    public TaskService(TaskRepository taskRepository) {
+    private final TaskRepository taskRepository;
+    private final TaskEventPublisher eventPublisher;
+
+    public TaskService(TaskRepository taskRepository, TaskEventPublisher eventPublisher) {
         this.taskRepository = taskRepository;
+        this.eventPublisher = eventPublisher;
     }
 
     public PagedResponse<TaskResponse> findAll(Pageable pageable) {
@@ -43,7 +46,7 @@ public class TaskService {
 
     @Cacheable(value = "tasks", key = "#id")
     public TaskResponse findById(Long id) {
-        log.debug("Fetching task with id={}", id);
+        log.debug("Fetching task id={}", id);
         return taskRepository.findById(id)
                              .map(TaskResponse::from)
                              .orElseThrow(() -> new TaskNotFoundException(id));
@@ -55,7 +58,7 @@ public class TaskService {
         log.info("Creating task: {}", request.title());
         Task task = new Task(request.title(), request.description(), request.status(), request.priority());
         Task saved = taskRepository.save(task);
-        log.info("Created task id={}", saved.getId());
+        eventPublisher.onTaskCreated(saved);
         return TaskResponse.from(saved);
     }
 
@@ -68,7 +71,11 @@ public class TaskService {
         task.setDescription(request.description());
         task.setStatus(request.status());
         task.setPriority(request.priority());
-        return TaskResponse.from(taskRepository.save(task));
+        Task saved = taskRepository.save(task);
+        if (saved.getStatus() == Task.TaskStatus.DONE) {
+            eventPublisher.onTaskCompleted(id);
+        }
+        return TaskResponse.from(saved);
     }
 
     @Transactional
@@ -79,6 +86,7 @@ public class TaskService {
             throw new TaskNotFoundException(id);
         }
         taskRepository.deleteById(id);
+        eventPublisher.onTaskDeleted(id);
     }
 
     public Map<String, Long> getStatusSummary() {
