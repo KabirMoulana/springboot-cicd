@@ -59,3 +59,6 @@ logging:
       enabled: true
     readinessstate:
       enabled: true
+
+  flyway:
+    enabled: false  # Enabled per-profile; use H2 create-drop for dev
