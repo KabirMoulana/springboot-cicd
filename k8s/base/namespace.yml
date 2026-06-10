@@ -1,0 +1,7 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: springboot-cicd
+  labels:
+    app.kubernetes.io/name: springboot-cicd
+    app.kubernetes.io/managed-by: kubectl
