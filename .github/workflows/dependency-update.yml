@@ -1,0 +1,35 @@
+name: Dependency Update Check
+
+on:
+  schedule:
+    - cron: "0 8 * * 1"   # Mondays at 08:00 UTC
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  dependabot-check:
+    name: Check for outdated dependencies
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          java-version: "21"
+          distribution: "temurin"
+          cache: maven
+
+      - name: Check for dependency updates
+        run: |
+          ./mvnw versions:display-dependency-updates -B 2>&1 | \
+            grep -E "\[INFO\].*->|outdated|Updates" || echo "No outdated deps found"
+
+      - name: Check for plugin updates
+        run: |
+          ./mvnw versions:display-plugin-updates -B 2>&1 | \
+            grep -E "\[INFO\].*->|outdated|Updates" || echo "No plugin updates found"
