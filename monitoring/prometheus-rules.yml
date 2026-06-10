@@ -1,0 +1,73 @@
+groups:
+  - name: springboot-cicd.alerts
+    interval: 30s
+    rules:
+
+      # ── Availability ──────────────────────────────
+      - alert: AppDown
+        expr: up{job="springboot-cicd"} == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Application is down"
+          description: "springboot-cicd has been down for more than 1 minute."
+
+      - alert: HighErrorRate
+        expr: |
+          sum(rate(http_server_requests_seconds_count{job="springboot-cicd",status=~"5.."}[5m]))
+          /
+          sum(rate(http_server_requests_seconds_count{job="springboot-cicd"}[5m])) > 0.05
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High HTTP error rate"
+          description: "Error rate is {{ humanizePercentage $value }} (threshold: 5%)"
+
+      # ── Latency ───────────────────────────────────
+      - alert: SlowResponses
+        expr: |
+          histogram_quantile(0.95,
+            sum(rate(http_server_requests_seconds_bucket{job="springboot-cicd"}[5m])) by (le)
+          ) > 1.0
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "P95 response time > 1s"
+          description: "95th percentile latency is {{ humanizeDuration $value }}"
+
+      # ── JVM ───────────────────────────────────────
+      - alert: HighHeapUsage
+        expr: |
+          jvm_memory_used_bytes{job="springboot-cicd",area="heap"}
+          /
+          jvm_memory_max_bytes{job="springboot-cicd",area="heap"} > 0.85
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "JVM heap usage > 85%"
+          description: "Heap usage is {{ humanizePercentage $value }}"
+
+      - alert: FrequentGCPauses
+        expr: |
+          rate(jvm_gc_pause_seconds_sum{job="springboot-cicd"}[5m]) > 0.2
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Frequent GC pauses"
+          description: "GC pause rate: {{ humanizeDuration $value }} per second"
+
+      # ── Database ──────────────────────────────────
+      - alert: DBConnectionPoolExhausted
+        expr: |
+          hikaricp_connections_pending{job="springboot-cicd"} > 5
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "HikariCP connection pool under pressure"
+          description: "{{ $value }} threads waiting for a DB connection"
