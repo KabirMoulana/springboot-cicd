@@ -26,10 +26,14 @@ public class TaskService {
 
     private final TaskRepository taskRepository;
     private final TaskEventPublisher eventPublisher;
+    private final AuditService auditService;
 
-    public TaskService(TaskRepository taskRepository, TaskEventPublisher eventPublisher) {
+    public TaskService(TaskRepository taskRepository,
+                       TaskEventPublisher eventPublisher,
+                       AuditService auditService) {
         this.taskRepository = taskRepository;
         this.eventPublisher = eventPublisher;
+        this.auditService = auditService;
     }
 
     public PagedResponse<TaskResponse> findAll(Pageable pageable) {
@@ -59,6 +63,7 @@ public class TaskService {
         Task task = new Task(request.title(), request.description(), request.status(), request.priority());
         Task saved = taskRepository.save(task);
         eventPublisher.onTaskCreated(saved);
+        auditService.log("Task", saved.getId(), "CREATE", "title=" + saved.getTitle());
         return TaskResponse.from(saved);
     }
 
@@ -67,6 +72,7 @@ public class TaskService {
     public TaskResponse update(Long id, TaskRequest request) {
         log.info("Updating task id={}", id);
         Task task = taskRepository.findById(id).orElseThrow(() -> new TaskNotFoundException(id));
+        String oldStatus = task.getStatus().name();
         task.setTitle(request.title());
         task.setDescription(request.description());
         task.setStatus(request.status());
@@ -75,6 +81,7 @@ public class TaskService {
         if (saved.getStatus() == Task.TaskStatus.DONE) {
             eventPublisher.onTaskCompleted(id);
         }
+        auditService.log("Task", id, "UPDATE", "status=" + oldStatus + " -> " + saved.getStatus());
         return TaskResponse.from(saved);
     }
 
@@ -87,6 +94,7 @@ public class TaskService {
         }
         taskRepository.deleteById(id);
         eventPublisher.onTaskDeleted(id);
+        auditService.log("Task", id, "DELETE", null);
     }
 
     public Map<String, Long> getStatusSummary() {
