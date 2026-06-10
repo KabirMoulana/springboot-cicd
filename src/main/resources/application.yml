@@ -69,3 +69,7 @@ springdoc:
   swagger-ui:
     path: /swagger-ui.html
     operationsSorter: method
+
+app:
+  rate-limit:
+    enabled: false   # Enable in prod; use Redis-backed solution for multi-instance
