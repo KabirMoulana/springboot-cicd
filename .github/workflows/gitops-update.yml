@@ -1,0 +1,67 @@
+name: GitOps — Update Image Tag
+
+on:
+  workflow_run:
+    workflows: ["CD — Build & Deploy"]
+    types: [completed]
+    branches: [main]
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  update-image-tag:
+    name: Update Helm image tag for ArgoCD
+    runs-on: ubuntu-latest
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          ref: main
+
+      - name: Get short SHA from triggering run
+        id: vars
+        run: |
+          SHA=$(echo "${{ github.event.workflow_run.head_sha }}" | cut -c1-7)
+          echo "short-sha=$SHA" >> $GITHUB_OUTPUT
+          echo "new-tag=sha-$SHA" >> $GITHUB_OUTPUT
+
+      - name: Update staging image tag
+        run: |
+          sed -i "s|^  tag:.*|  tag: \"${{ steps.vars.outputs.new-tag }}\"|" \
+            helm/springboot-cicd/values-staging.yaml
+          echo "Updated staging tag to ${{ steps.vars.outputs.new-tag }}"
+
+      - name: Commit and push tag update
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add helm/springboot-cicd/values-staging.yaml
+          git diff --cached --quiet || git commit -m "chore(gitops): update staging image tag to ${{ steps.vars.outputs.new-tag }} [skip ci]"
+          git push
+
+      - name: Create PR to update production tag
+        uses: peter-evans/create-pull-request@v6
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          commit-message: "chore(gitops): bump production image to ${{ steps.vars.outputs.new-tag }}"
+          title: "chore(gitops): promote ${{ steps.vars.outputs.new-tag }} to production"
+          body: |
+            ## Production Promotion
+
+            Promotes image tag `${{ steps.vars.outputs.new-tag }}` to production.
+
+            ### Triggered by
+            - Workflow run: ${{ github.event.workflow_run.html_url }}
+            - Commit: ${{ github.event.workflow_run.head_sha }}
+
+            ### Checklist
+            - [ ] Staging smoke tests passed
+            - [ ] No critical alerts in staging
+            - [ ] Reviewed changes
+          branch: gitops/promote-${{ steps.vars.outputs.new-tag }}
+          base: main
+          labels: gitops,production
