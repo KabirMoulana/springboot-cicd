@@ -1,0 +1,101 @@
+name: Kubernetes Deploy
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: "Deployment environment"
+        required: true
+        type: choice
+        options: [staging, production]
+      image_tag:
+        description: "Docker image tag to deploy"
+        required: true
+        default: "latest"
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  deploy:
+    name: Deploy to Kubernetes (${{ github.event.inputs.environment }})
+    runs-on: ubuntu-latest
+    environment: ${{ github.event.inputs.environment }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up kubectl
+        uses: azure/setup-kubectl@v4
+        with:
+          version: "v1.31.0"
+
+      - name: Set up Helm
+        uses: azure/setup-helm@v4
+        with:
+          version: "3.16.0"
+
+      - name: Configure kubectl
+        run: |
+          mkdir -p ~/.kube
+          echo "${{ secrets.KUBE_CONFIG }}" | base64 -d > ~/.kube/config
+          chmod 600 ~/.kube/config
+          kubectl version --client
+
+      - name: Add Bitnami repo
+        run: |
+          helm repo add bitnami https://charts.bitnami.com/bitnami
+          helm repo update
+
+      - name: Update chart dependencies
+        run: helm dependency update helm/springboot-cicd
+
+      - name: Helm diff (staging)
+        if: github.event.inputs.environment == 'staging'
+        run: |
+          helm diff upgrade springboot-cicd-staging helm/springboot-cicd \
+            -f helm/springboot-cicd/values.yaml \
+            -f helm/springboot-cicd/values-staging.yaml \
+            --set image.tag=${{ github.event.inputs.image_tag }} \
+            --namespace springboot-cicd-staging \
+            --allow-unreleased || true
+
+      - name: Helm upgrade / install
+        run: |
+          NAMESPACE="springboot-cicd"
+          VALUES_FILE="helm/springboot-cicd/values-production.yaml"
+          RELEASE="springboot-cicd-prod"
+
+          if [ "${{ github.event.inputs.environment }}" = "staging" ]; then
+            NAMESPACE="springboot-cicd-staging"
+            VALUES_FILE="helm/springboot-cicd/values-staging.yaml"
+            RELEASE="springboot-cicd-staging"
+          fi
+
+          helm upgrade "$RELEASE" helm/springboot-cicd \
+            -f helm/springboot-cicd/values.yaml \
+            -f "$VALUES_FILE" \
+            --set image.tag=${{ github.event.inputs.image_tag }} \
+            --namespace "$NAMESPACE" \
+            --create-namespace \
+            --wait \
+            --timeout 5m \
+            --atomic \
+            --history-max 5
+
+      - name: Verify rollout
+        run: |
+          NAMESPACE="springboot-cicd"
+          [ "${{ github.event.inputs.environment }}" = "staging" ] && NAMESPACE="springboot-cicd-staging"
+          kubectl rollout status deployment/springboot-cicd --namespace "$NAMESPACE" --timeout=3m
+
+      - name: Run Helm tests
+        run: |
+          RELEASE="springboot-cicd-prod"
+          NAMESPACE="springboot-cicd"
+          if [ "${{ github.event.inputs.environment }}" = "staging" ]; then
+            RELEASE="springboot-cicd-staging"
+            NAMESPACE="springboot-cicd-staging"
+          fi
+          helm test "$RELEASE" --namespace "$NAMESPACE" --timeout 2m || true
