@@ -1,0 +1,61 @@
+name: Helm Chart CI
+
+on:
+  push:
+    paths:
+      - "helm/**"
+    branches: ["main", "develop"]
+  pull_request:
+    paths:
+      - "helm/**"
+
+permissions:
+  contents: read
+
+jobs:
+  lint:
+    name: Helm Lint & Template Validation
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Helm
+        uses: azure/setup-helm@v4
+        with:
+          version: "3.16.0"
+
+      - name: Add Bitnami repo (for dependencies)
+        run: helm repo add bitnami https://charts.bitnami.com/bitnami && helm repo update
+
+      - name: Update chart dependencies
+        run: helm dependency update helm/springboot-cicd
+
+      - name: Lint chart (default values)
+        run: helm lint helm/springboot-cicd
+
+      - name: Lint chart (staging values)
+        run: helm lint helm/springboot-cicd -f helm/springboot-cicd/values-staging.yaml
+
+      - name: Lint chart (production values)
+        run: helm lint helm/springboot-cicd -f helm/springboot-cicd/values-production.yaml
+
+      - name: Template render check (default)
+        run: |
+          helm template test-release helm/springboot-cicd \
+            --namespace springboot-cicd \
+            --debug | head -100
+
+      - name: Template render check (ci values)
+        run: |
+          helm template test-release helm/springboot-cicd \
+            -f helm/springboot-cicd/ci/test-values.yaml \
+            --namespace springboot-cicd
+
+      - name: Install chart-testing
+        uses: helm/chart-testing-action@v2.6.1
+
+      - name: Run chart-testing (lint)
+        run: ct lint --target-branch ${{ github.event.repository.default_branch }} --chart-dirs helm
