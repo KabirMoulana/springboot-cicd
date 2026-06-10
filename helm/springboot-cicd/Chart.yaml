@@ -1,0 +1,22 @@
+apiVersion: v2
+name: springboot-cicd
+description: A production-ready Spring Boot Task API Helm chart
+type: application
+version: 1.0.0
+appVersion: "1.0.0"
+keywords:
+  - spring-boot
+  - java
+  - rest-api
+  - task-management
+home: https://github.com/KabirMoulana/springboot-cicd
+sources:
+  - https://github.com/KabirMoulana/springboot-cicd
+maintainers:
+  - name: Kabir Moulana
+    url: https://github.com/KabirMoulana
+dependencies:
+  - name: postgresql
+    version: "13.x.x"
+    repository: https://charts.bitnami.com/bitnami
+    condition: postgresql.enabled
