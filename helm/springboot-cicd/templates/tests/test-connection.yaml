@@ -1,0 +1,23 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: "{{ include "springboot-cicd.fullname" . }}-test-connection"
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "springboot-cicd.labels" . | nindent 4 }}
+  annotations:
+    "helm.sh/hook": test
+    "helm.sh/hook-delete-policy": before-hook-creation,hook-succeeded
+spec:
+  restartPolicy: Never
+  containers:
+    - name: health-check
+      image: curlimages/curl:latest
+      command: ["curl", "-sf"]
+      args:
+        - "http://{{ include "springboot-cicd.fullname" . }}:{{ .Values.service.port }}/actuator/health"
+    - name: api-check
+      image: curlimages/curl:latest
+      command: ["curl", "-sf"]
+      args:
+        - "http://{{ include "springboot-cicd.fullname" . }}:{{ .Values.service.port }}/api/"
