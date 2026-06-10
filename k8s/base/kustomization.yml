@@ -1,0 +1,19 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: springboot-cicd
+
+resources:
+  - namespace.yml
+  - serviceaccount.yml
+  - configmap.yml
+  - secret.yml
+  - deployment.yml
+  - service.yml
+  - ingress.yml
+  - hpa.yml
+  - pdb.yml
+
+commonLabels:
+  app.kubernetes.io/name: springboot-cicd
+  app.kubernetes.io/managed-by: kustomize
