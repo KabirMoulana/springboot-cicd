@@ -1,0 +1,31 @@
+apiVersion: argoproj.io/v1alpha1
+kind: AppProject
+metadata:
+  name: springboot-cicd
+  namespace: argocd
+spec:
+  description: Spring Boot CI/CD project
+  sourceRepos:
+    - https://github.com/KabirMoulana/springboot-cicd.git
+    - https://charts.bitnami.com/bitnami
+  destinations:
+    - namespace: springboot-cicd
+      server: https://kubernetes.default.svc
+    - namespace: springboot-cicd-staging
+      server: https://kubernetes.default.svc
+  clusterResourceWhitelist:
+    - group: ""
+      kind: Namespace
+  namespaceResourceWhitelist:
+    - group: "*"
+      kind: "*"
+  roles:
+    - name: developer
+      description: Developer — can sync staging only
+      policies:
+        - p, proj:springboot-cicd:developer, applications, sync, springboot-cicd/springboot-cicd-staging, allow
+        - p, proj:springboot-cicd:developer, applications, get, springboot-cicd/*, allow
+    - name: ops
+      description: Ops — full access
+      policies:
+        - p, proj:springboot-cicd:ops, applications, *, springboot-cicd/*, allow

@@ -1,0 +1,40 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: springboot-cicd-production
+  namespace: argocd
+  labels:
+    environment: production
+    app: springboot-cicd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+  annotations:
+    notifications.argoproj.io/subscribe.on-sync-succeeded.slack: deployments
+    notifications.argoproj.io/subscribe.on-sync-failed.slack: alerts
+    notifications.argoproj.io/subscribe.on-health-degraded.slack: alerts
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/KabirMoulana/springboot-cicd.git
+    targetRevision: HEAD
+    path: helm/springboot-cicd
+    helm:
+      valueFiles:
+        - values.yaml
+        - values-production.yaml
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: springboot-cicd
+  syncPolicy:
+    # Manual sync for production — requires approval
+    automated: null
+    syncOptions:
+      - CreateNamespace=true
+      - PrunePropagationPolicy=foreground
+    retry:
+      limit: 3
+      backoff:
+        duration: 10s
+        factor: 2
+        maxDuration: 5m
+  revisionHistoryLimit: 20
