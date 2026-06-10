@@ -1,0 +1,2 @@
+-- Flyway migration V2: seed initial data (only for non-prod)
+-- In prod, keep this empty or use a separate seed mechanism
