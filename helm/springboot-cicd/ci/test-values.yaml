@@ -1,0 +1,22 @@
+# CI test values (minimal, no ingress, no HPA)
+replicaCount: 1
+
+autoscaling:
+  enabled: false
+
+ingress:
+  enabled: false
+
+podDisruptionBudget:
+  enabled: false
+
+externalSecret:
+  enabled: false
+
+resources:
+  limits:
+    cpu: 200m
+    memory: 256Mi
+  requests:
+    cpu: 50m
+    memory: 128Mi
