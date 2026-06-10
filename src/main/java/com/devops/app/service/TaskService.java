@@ -10,7 +10,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
-import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -37,15 +36,13 @@ public class TaskService {
     }
 
     public PagedResponse<TaskResponse> findAll(Pageable pageable) {
-        Page<TaskResponse> page = taskRepository.findAll(pageable).map(TaskResponse::from);
-        return PagedResponse.from(page);
+        return PagedResponse.from(taskRepository.findAll(pageable).map(TaskResponse::from));
     }
 
     public PagedResponse<TaskResponse> search(String title, Task.TaskStatus status,
                                                Task.Priority priority, Pageable pageable) {
-        Page<TaskResponse> page = taskRepository.search(title, status, priority, pageable)
-                                                .map(TaskResponse::from);
-        return PagedResponse.from(page);
+        return PagedResponse.from(
+            taskRepository.search(title, status, priority, pageable).map(TaskResponse::from));
     }
 
     @Cacheable(value = "tasks", key = "#id")
@@ -82,6 +79,21 @@ public class TaskService {
             eventPublisher.onTaskCompleted(id);
         }
         auditService.log("Task", id, "UPDATE", "status=" + oldStatus + " -> " + saved.getStatus());
+        return TaskResponse.from(saved);
+    }
+
+    @Transactional
+    @CacheEvict(value = "tasks", key = "#id")
+    public TaskResponse updateStatus(Long id, Task.TaskStatus newStatus) {
+        log.info("Patching status of task id={} to {}", id, newStatus);
+        Task task = taskRepository.findById(id).orElseThrow(() -> new TaskNotFoundException(id));
+        String oldStatus = task.getStatus().name();
+        task.setStatus(newStatus);
+        Task saved = taskRepository.save(task);
+        if (saved.getStatus() == Task.TaskStatus.DONE) {
+            eventPublisher.onTaskCompleted(id);
+        }
+        auditService.log("Task", id, "PATCH_STATUS", oldStatus + " -> " + newStatus);
         return TaskResponse.from(saved);
     }
 

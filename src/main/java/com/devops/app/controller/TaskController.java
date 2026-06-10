@@ -3,6 +3,7 @@ package com.devops.app.controller;
 import com.devops.app.dto.PagedResponse;
 import com.devops.app.dto.TaskRequest;
 import com.devops.app.dto.TaskResponse;
+import com.devops.app.dto.UpdateStatusRequest;
 import com.devops.app.model.Task;
 import com.devops.app.service.TaskService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -33,13 +34,12 @@ public class TaskController {
     }
 
     @GetMapping
-    @Operation(summary = "List tasks", description = "Returns a paginated list of tasks with optional filtering")
-    @ApiResponse(responseCode = "200", description = "Successful response")
+    @Operation(summary = "List tasks", description = "Paginated list with optional title/status/priority filter")
     public ResponseEntity<PagedResponse<TaskResponse>> list(
-            @Parameter(description = "Page number (0-indexed)") @RequestParam(defaultValue = "0") int page,
-            @Parameter(description = "Page size (max 100)")    @RequestParam(defaultValue = "20") int size,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size,
             @RequestParam(defaultValue = "createdAt") String sortBy,
-            @RequestParam(defaultValue = "desc")     String sortDir,
+            @RequestParam(defaultValue = "desc") String sortDir,
             @RequestParam(required = false) String title,
             @RequestParam(required = false) Task.TaskStatus status,
             @RequestParam(required = false) Task.Priority priority) {
@@ -74,26 +74,32 @@ public class TaskController {
     }
 
     @PutMapping("/{id}")
-    @Operation(summary = "Update an existing task")
-    @ApiResponse(responseCode = "200", description = "Task updated")
-    @ApiResponse(responseCode = "404", description = "Task not found")
+    @Operation(summary = "Full update of a task")
     public ResponseEntity<TaskResponse> update(
             @PathVariable Long id,
             @Valid @RequestBody TaskRequest request) {
         return ResponseEntity.ok(taskService.update(id, request));
     }
 
+    @PatchMapping("/{id}/status")
+    @Operation(summary = "Partial update — change task status only")
+    @ApiResponse(responseCode = "200", description = "Status updated")
+    @ApiResponse(responseCode = "404", description = "Task not found")
+    public ResponseEntity<TaskResponse> updateStatus(
+            @PathVariable Long id,
+            @Valid @RequestBody UpdateStatusRequest request) {
+        return ResponseEntity.ok(taskService.updateStatus(id, request.status()));
+    }
+
     @DeleteMapping("/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     @Operation(summary = "Delete a task")
-    @ApiResponse(responseCode = "204", description = "Task deleted")
-    @ApiResponse(responseCode = "404", description = "Task not found")
     public void delete(@PathVariable Long id) {
         taskService.delete(id);
     }
 
     @GetMapping("/stats")
-    @Operation(summary = "Get task status summary")
+    @Operation(summary = "Task status summary")
     public ResponseEntity<Map<String, Long>> stats() {
         return ResponseEntity.ok(taskService.getStatusSummary());
     }
