@@ -1,5 +1,6 @@
 package com.devops.app.integration;
 
+import com.devops.app.config.TestAsyncConfig;
 import com.devops.app.dto.TaskRequest;
 import com.devops.app.model.Task;
 import com.devops.app.repository.AuditLogRepository;
@@ -10,20 +11,20 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.context.annotation.Import;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 
-import java.util.concurrent.TimeUnit;
-
-import static org.awaitility.Awaitility.await;
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @SpringBootTest
 @AutoConfigureMockMvc
 @ActiveProfiles("test")
+@Import(TestAsyncConfig.class)
 class AuditIntegrationTest {
 
     @Autowired MockMvc mockMvc;
@@ -48,11 +49,9 @@ class AuditIntegrationTest {
 
         Long taskId = objectMapper.readTree(body).get("id").asLong();
 
-        // Audit is async — wait up to 3 seconds
-        await().atMost(3, TimeUnit.SECONDS).untilAsserted(() -> {
-            long count = auditLogRepository.findByEntityTypeAndEntityId("Task", taskId,
-                org.springframework.data.domain.PageRequest.of(0, 10)).getTotalElements();
-            assertThat(count).isGreaterThanOrEqualTo(1);
-        });
+        // Synchronous executor means audit is written immediately
+        long count = auditLogRepository.findByEntityTypeAndEntityId(
+            "Task", taskId, PageRequest.of(0, 10)).getTotalElements();
+        assertThat(count).isGreaterThanOrEqualTo(1);
     }
 }
