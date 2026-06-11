@@ -1,9 +1,10 @@
 package com.devops.app.controller;
 
-import com.devops.app.config.SecurityConfig;
+
 import com.devops.app.dto.PagedResponse;
 import com.devops.app.dto.TaskRequest;
 import com.devops.app.dto.TaskResponse;
+import com.devops.app.config.TestSecurityConfig;
 import com.devops.app.exception.GlobalExceptionHandler;
 import com.devops.app.exception.TaskNotFoundException;
 import com.devops.app.model.Task;
@@ -28,7 +29,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 @WebMvcTest(TaskController.class)
-@Import({SecurityConfig.class, GlobalExceptionHandler.class})
+@Import({TestSecurityConfig.class, GlobalExceptionHandler.class})
 @DisplayName("TaskController web layer tests")
 class TaskControllerTest {
 

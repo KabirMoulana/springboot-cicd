@@ -1,6 +1,6 @@
 package com.devops.app.exception;
 
-import com.devops.app.config.SecurityConfig;
+
 import com.devops.app.controller.TaskController;
 import com.devops.app.service.TaskService;
 import org.junit.jupiter.api.DisplayName;
@@ -17,7 +17,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 @WebMvcTest(TaskController.class)
-@Import({SecurityConfig.class, GlobalExceptionHandler.class})
+@Import({TestSecurityConfig.class, GlobalExceptionHandler.class})
 @DisplayName("GlobalExceptionHandler tests")
 class GlobalExceptionHandlerTest {
 
