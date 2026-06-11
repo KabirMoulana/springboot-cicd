@@ -4,11 +4,13 @@ import com.devops.app.dto.TaskResponse;
 import com.devops.app.model.Task;
 import com.devops.app.repository.TaskRepository;
 import org.junit.jupiter.api.BeforeEach;
+import com.devops.app.config.TestAsyncConfig;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.cache.CacheManager;
+import org.springframework.context.annotation.Import;
 import org.springframework.test.context.ActiveProfiles;
 
 import java.util.Optional;
@@ -18,6 +20,7 @@ import static org.mockito.Mockito.*;
 
 @SpringBootTest
 @ActiveProfiles("test")
+@Import(TestAsyncConfig.class)
 class TaskServiceCacheTest {
 
     @Autowired TaskService taskService;
