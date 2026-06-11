@@ -1,6 +1,6 @@
 spring:
   datasource:
-    url: jdbc:h2:mem:testdb;DB_CLOSE_DELAY=-1;NON_KEYWORDS=VALUE
+    url: jdbc:h2:mem:testdb;DB_CLOSE_DELAY=-1;NON_KEYWORDS=VALUE;DB_CLOSE_ON_EXIT=FALSE
     driver-class-name: org.h2.Driver
     username: sa
     password:
@@ -17,15 +17,28 @@ spring:
       enabled: false
   sql:
     init:
-      mode: never  # Don't run data.sql in tests
+      mode: never
+  flyway:
+    enabled: false
 
 management:
   endpoints:
     web:
       exposure:
         include: health,prometheus
+  endpoint:
+    health:
+      show-details: always
+
+app:
+  jwt:
+    secret: test-secret-key-minimum-32-characters-long
+    expiration-ms: 3600000
+  rate-limit:
+    enabled: false
 
 logging:
   level:
     root: WARN
     com.devops.app: INFO
+    org.springframework.security: WARN
