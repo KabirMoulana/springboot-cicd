@@ -73,3 +73,8 @@ springdoc:
 app:
   rate-limit:
     enabled: false   # Enable in prod; use Redis-backed solution for multi-instance
+
+  jwt:
+    secret: ${JWT_SECRET:dev-secret-must-be-changed-in-production-!!}
+    expiration-ms: 86400000
+    refresh-expiration-ms: 604800000
