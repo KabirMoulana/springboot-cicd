@@ -24,6 +24,9 @@ jobs:
           distribution: "temurin"
           cache: maven
 
+      - name: Make mvnw executable
+        run: chmod +x mvnw
+
       - name: Check for dependency updates
         run: |
           ./mvnw versions:display-dependency-updates -B 2>&1 | \
