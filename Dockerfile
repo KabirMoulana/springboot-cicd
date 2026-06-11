@@ -1,7 +1,7 @@
 # ─────────────────────────────────────────────
 # Stage 1: Build
 # ─────────────────────────────────────────────
-FROM eclipse-temurin:21-jdk-alpine AS builder
+FROM eclipse-temurin:25-jdk-alpine AS builder
 
 WORKDIR /build
 
@@ -21,7 +21,7 @@ RUN ./mvnw package -B -DskipTests -q && \
 # ─────────────────────────────────────────────
 # Stage 2: Runtime
 # ─────────────────────────────────────────────
-FROM eclipse-temurin:21-jre-alpine AS runtime
+FROM eclipse-temurin:25-jre-alpine AS runtime
 
 # Security: non-root user
 RUN addgroup -S appgroup && adduser -S appuser -G appgroup
