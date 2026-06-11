@@ -22,6 +22,9 @@ spring:
       enabled: true
       path: /h2-console
 
+  flyway:
+    enabled: false  # Enabled per-profile; use H2 create-drop for dev
+
 management:
   endpoints:
     web:
@@ -30,6 +33,10 @@ management:
   endpoint:
     health:
       show-details: when-authorized
+      livenessstate:
+        enabled: true
+      readinessstate:
+        enabled: true
   metrics:
     export:
       prometheus:
@@ -40,6 +47,12 @@ management:
 
 app:
   version: "@project.version@"
+  rate-limit:
+    enabled: false
+  jwt:
+    secret: ${JWT_SECRET:dev-secret-must-be-changed-in-production-minimum32chars}
+    expiration-ms: 86400000
+    refresh-expiration-ms: 604800000
 
 info:
   app:
@@ -54,27 +67,9 @@ logging:
   pattern:
     console: "%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n"
 
-  health:
-    livenessstate:
-      enabled: true
-    readinessstate:
-      enabled: true
-
-  flyway:
-    enabled: false  # Enabled per-profile; use H2 create-drop for dev
-
 springdoc:
   api-docs:
     path: /api-docs
   swagger-ui:
     path: /swagger-ui.html
     operationsSorter: method
-
-app:
-  rate-limit:
-    enabled: false   # Enable in prod; use Redis-backed solution for multi-instance
-
-  jwt:
-    secret: ${JWT_SECRET:dev-secret-must-be-changed-in-production-!!}
-    expiration-ms: 86400000
-    refresh-expiration-ms: 604800000
