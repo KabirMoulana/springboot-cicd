@@ -3,6 +3,7 @@ package com.devops.app.service;
 import com.devops.app.dto.TaskRequest;
 import com.devops.app.dto.TaskResponse;
 import com.devops.app.exception.TaskNotFoundException;
+import com.devops.app.service.AuditService;
 import com.devops.app.model.Task;
 import com.devops.app.repository.TaskRepository;
 import org.junit.jupiter.api.BeforeEach;
@@ -29,6 +30,7 @@ class TaskServiceTest {
 
     @Mock TaskRepository taskRepository;
     @Mock TaskEventPublisher eventPublisher;
+    @Mock AuditService auditService;
     @InjectMocks TaskService taskService;
 
     private Task sampleTask;
