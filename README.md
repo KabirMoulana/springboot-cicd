@@ -2,11 +2,11 @@
 
 [![CI](https://github.com/KabirMoulana/springboot-cicd/actions/workflows/ci.yml/badge.svg)](https://github.com/KabirMoulana/springboot-cicd/actions/workflows/ci.yml)
 [![CD](https://github.com/KabirMoulana/springboot-cicd/actions/workflows/cd.yml/badge.svg)](https://github.com/KabirMoulana/springboot-cicd/actions/workflows/cd.yml)
+[![Integration Tests](https://github.com/KabirMoulana/springboot-cicd/actions/workflows/integration-tests.yml/badge.svg)](https://github.com/KabirMoulana/springboot-cicd/actions/workflows/integration-tests.yml)
 [![Security Scan](https://github.com/KabirMoulana/springboot-cicd/actions/workflows/scheduled-security.yml/badge.svg)](https://github.com/KabirMoulana/springboot-cicd/actions/workflows/scheduled-security.yml)
-[![codecov](https://codecov.io/gh/KabirMoulana/springboot-cicd/branch/main/graph/badge.svg)](https://codecov.io/gh/KabirMoulana/springboot-cicd)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-A **production-ready Java 21 / Spring Boot 3.3** REST API with an enterprise-grade CI/CD pipeline using GitHub Actions.
+A **production-ready Java 21 / Spring Boot 3.3.5** Task Management REST API with an enterprise-grade CI/CD pipeline — 100 commits of real, working infrastructure.
 
 ---
 
@@ -14,24 +14,25 @@ A **production-ready Java 21 / Spring Boot 3.3** REST API with an enterprise-gra
 
 ```
 ┌──────────────────────────────────────────────────────────────┐
-│                     GitHub Actions CI/CD                      │
-│                                                              │
-│  Push/PR → CI (test+sonar+owasp+lint) → CD (build+deploy)   │
-│                  ↓ weekly cron                               │
-│           Security (Trivy + CodeQL)                          │
+│                    GitHub Actions (9 workflows)               │
+│  ci.yml · cd.yml · pr-checks · release · integration-tests  │
+│  scheduled-security · performance · helm-ci · gitops-update │
 └──────────────────────────────────────────────────────────────┘
-               ↓ GHCR image
-┌──────────────────────────────────────┐
-│           Kubernetes / Docker        │
-│  ┌──────────┐    ┌────────────────┐  │
-│  │  App Pod │    │   PostgreSQL   │  │
-│  │ (x2 min) │────│   (via K8s)    │  │
-│  └──────────┘    └────────────────┘  │
-│       │                              │
-│  ┌────┴────────────────────────────┐ │
-│  │  Prometheus → Grafana           │ │
-│  └─────────────────────────────────┘ │
-└──────────────────────────────────────┘
+               ↓ GHCR multi-arch image (amd64/arm64)
+┌──────────────────────────────────────────────────┐
+│       Kubernetes (Helm + Kustomize + ArgoCD)      │
+│  ┌─────────────────┐   ┌────────────────────────┐ │
+│  │  App Deployment  │   │  PostgreSQL (external) │ │
+│  │  HPA: 2–10 pods  │───│  Flyway migrations     │ │
+│  │  PDB: minAvail=1 │   └────────────────────────┘ │
+│  └─────────────────┘                               │
+│  NetworkPolicy · RBAC · Sealed Secrets            │
+└──────────────────────────────────────────────────┘
+               ↓ Prometheus scrape
+┌─────────────────────────────────┐
+│  Prometheus → Grafana           │
+│  Custom metrics · Alert rules   │
+└─────────────────────────────────┘
 ```
 
 ## 📁 Project Structure
@@ -39,151 +40,88 @@ A **production-ready Java 21 / Spring Boot 3.3** REST API with an enterprise-gra
 ```
 springboot-cicd/
 ├── .github/
-│   ├── workflows/
-│   │   ├── ci.yml                  # Tests, SonarCloud, OWASP, Lint
-│   │   ├── cd.yml                  # Docker build/push, staging, blue/green prod
-│   │   ├── pr-checks.yml           # PR validation, coverage comment, Hadolint
-│   │   ├── release.yml             # Tag-triggered releases
-│   │   ├── scheduled-security.yml  # Weekly Trivy + CodeQL
-│   │   ├── performance-test.yml    # k6 load tests (manual trigger)
-│   │   └── dependency-update.yml   # Weekly outdated deps check
-│   ├── ISSUE_TEMPLATE/
+│   ├── workflows/          # 9 GitHub Actions workflows
+│   ├── ISSUE_TEMPLATE/     # Bug + feature templates
+│   ├── pull_request_template.md
 │   └── dependabot.yml
 ├── src/
 │   ├── main/java/com/devops/app/
-│   │   ├── Application.java
-│   │   ├── config/          # Security, Cache, Metrics, OpenAPI, Actuator
-│   │   ├── controller/      # TaskController, InfoController
-│   │   ├── dto/             # TaskRequest, TaskResponse, PagedResponse
-│   │   ├── exception/       # GlobalExceptionHandler (RFC 9457 ProblemDetail)
-│   │   ├── model/           # Task (JPA entity)
-│   │   ├── repository/      # TaskRepository (custom JPQL queries)
-│   │   └── service/         # TaskService (caching, pagination)
+│   │   ├── config/         # Security, Cache, Metrics, OpenAPI, Async, JPA, Logging
+│   │   ├── controller/     # Task, Info, Audit controllers
+│   │   ├── dto/            # Request/Response/Paged/Error records
+│   │   ├── exception/      # RFC 9457 ProblemDetail handler
+│   │   ├── model/          # Task, AuditLog JPA entities
+│   │   ├── repository/     # TaskRepository, AuditLogRepository
+│   │   └── service/        # TaskService, AuditService, TaskEventPublisher
 │   ├── main/resources/
-│   │   ├── application.yml          # Base config
-│   │   ├── application-prod.yml     # PostgreSQL + Flyway
-│   │   ├── application-staging.yml
-│   │   └── db/migration/            # Flyway SQL migrations
-│   └── test/
-│       ├── controller/  # WebMvcTest slice tests
-│       ├── service/     # Mockito unit tests
-│       ├── repository/  # DataJpaTest slice tests
-│       └── integration/ # Full SpringBootTest
-├── k8s/
-│   ├── base/        # Deployment, Service, Ingress, HPA, PDB, RBAC
-│   └── overlays/    # staging / production Kustomize overlays
-├── performance/     # k6 load test scripts
-├── monitoring/      # Prometheus + Grafana configs
-├── scripts/         # local-dev.sh, smoke-test.sh
-├── Dockerfile       # Multi-stage, layered JAR, non-root
-├── docker-compose.yml
-└── pom.xml
-```
-
-## ⚙️ CI/CD Pipeline
-
-```
-Push to main
-     │
-     ▼
-┌──────────────┐   ┌──────────────┐   ┌───────────────────┐
-│  CI Pipeline │   │  CD Pipeline │   │  Weekly Scheduled │
-│              │   │              │   │                   │
-│ • Unit tests │──▶│ • Build JAR  │   │ • Trivy scan      │
-│ • JaCoCo     │   │ • Docker     │   │ • CodeQL SAST     │
-│ • SonarCloud │   │   multi-arch │   │ • Dep updates     │
-│ • OWASP scan │   │ • Push GHCR  │   └───────────────────┘
-│ • Lint       │   │ • Staging    │
-└──────────────┘   │   + smoke    │
-                   │ • Prod       │
-                   │   blue/green │
-                   └──────────────┘
+│   │   ├── application*.yml           # Base + prod + staging profiles
+│   │   ├── logback-spring.xml         # JSON (prod) + human (dev) logging
+│   │   └── db/migration/              # Flyway V1–V3 SQL migrations
+│   └── test/               # Unit, slice, integration, cache, audit tests
+├── helm/springboot-cicd/   # Full Helm chart with env values files
+├── k8s/                    # Kustomize base + staging/production overlays
+├── argocd/                 # ArgoCD Application + AppProject manifests
+├── performance/            # k6 load test script
+├── monitoring/             # Prometheus rules + Grafana dashboard JSON
+├── scripts/                # local-dev, smoke-test, db-migrate, generate-secrets
+├── docs/                   # ARCHITECTURE.md, RUNBOOK.md, SECRETS.md
+├── Dockerfile              # Multi-stage layered JAR, non-root
+├── docker-compose.yml      # Full local stack
+└── Makefile                # Developer shortcuts
 ```
 
 ## 🚀 Quick Start
 
-### Run locally
-
 ```bash
-./scripts/local-dev.sh start
-```
+# Full local stack (app + postgres + prometheus + grafana)
+make docker-up
 
-### Run tests
+# Run all tests
+make test
 
-```bash
-./mvnw verify
-# Coverage: target/site/jacoco/index.html
-```
-
-### Build Docker image
-
-```bash
-docker build -t springboot-cicd:local .
-docker run -p 8080:8080 -e SPRING_PROFILES_ACTIVE=default springboot-cicd:local
-```
-
-### Smoke test
-
-```bash
-./scripts/smoke-test.sh http://localhost:8080
+# Smoke test
+make smoke-test
 ```
 
 ## 📡 API Endpoints
 
-| Method   | Endpoint              | Description              |
-|----------|-----------------------|--------------------------|
-| `GET`    | `/api/`               | App info                 |
-| `GET`    | `/api/tasks`          | List tasks (paginated)   |
-| `GET`    | `/api/tasks?title=X`  | Search tasks             |
-| `GET`    | `/api/tasks/{id}`     | Get task by ID           |
-| `POST`   | `/api/tasks`          | Create task              |
-| `PUT`    | `/api/tasks/{id}`     | Update task              |
-| `DELETE` | `/api/tasks/{id}`     | Delete task              |
-| `GET`    | `/api/tasks/stats`    | Status summary           |
-| `GET`    | `/actuator/health`    | Health (liveness)        |
-| `GET`    | `/actuator/prometheus`| Prometheus metrics       |
-| `GET`    | `/swagger-ui.html`    | Swagger UI               |
+| Method   | Endpoint                    | Description            |
+|----------|-----------------------------|------------------------|
+| `GET`    | `/api/`                     | App info               |
+| `GET`    | `/api/tasks`                | List (paginated)       |
+| `GET`    | `/api/tasks?title=X&status=TODO` | Search/filter     |
+| `GET`    | `/api/tasks/{id}`           | Get by ID              |
+| `POST`   | `/api/tasks`                | Create task            |
+| `PUT`    | `/api/tasks/{id}`           | Full update            |
+| `PATCH`  | `/api/tasks/{id}/status`    | Status-only update     |
+| `DELETE` | `/api/tasks/{id}`           | Delete task            |
+| `GET`    | `/api/tasks/stats`          | Status summary         |
+| `GET`    | `/api/audit`                | Audit log              |
+| `GET`    | `/api/audit/tasks/{id}`     | Task audit trail       |
+| `GET`    | `/actuator/health`          | Health (liveness)      |
+| `GET`    | `/actuator/prometheus`      | Prometheus metrics     |
+| `GET`    | `/swagger-ui.html`          | Swagger UI             |
 
-## 🔧 GitHub Actions Secrets Required
+## 🔧 CI/CD Workflows
 
-| Secret                   | Description                         |
-|--------------------------|-------------------------------------|
-| `STAGING_SSH_KEY`        | Private SSH key for staging server  |
-| `STAGING_HOST`           | Staging server hostname/IP          |
-| `STAGING_USER`           | SSH username                        |
-| `STAGING_DATABASE_URL`   | Staging PostgreSQL JDBC URL         |
-| `STAGING_DATABASE_USER`  | DB username                         |
-| `STAGING_DATABASE_PASSWORD` | DB password                      |
-| `PROD_SSH_KEY`           | Private SSH key for production      |
-| `PROD_HOST`              | Production hostname/IP              |
-| `PROD_USER`              | SSH username                        |
-| `PROD_DATABASE_URL`      | Production PostgreSQL JDBC URL      |
-| `PROD_DATABASE_USER`     | DB username                         |
-| `PROD_DATABASE_PASSWORD` | DB password                         |
-| `NVD_API_KEY`            | NVD API key for OWASP scan          |
-| `SONAR_TOKEN`            | SonarCloud token                    |
+| Workflow | Trigger | What it does |
+|----------|---------|--------------|
+| `ci.yml` | push/PR | Tests, JaCoCo, SonarCloud, OWASP, lint |
+| `cd.yml` | push main | Build multi-arch image → staging → prod blue/green |
+| `pr-checks.yml` | PR | Conventional Commits, coverage, Hadolint |
+| `release.yml` | `v*.*.*` tag | GitHub Release + JAR attachment |
+| `integration-tests.yml` | push/nightly | Tests against real PostgreSQL service |
+| `scheduled-security.yml` | weekly | Trivy + CodeQL SAST |
+| `performance-test.yml` | manual | k6 load test |
+| `helm-ci.yml` | helm/** | Helm lint + template render + chart-testing |
+| `gitops-update.yml` | CD success | Auto-update staging tag, PR for prod |
 
-> `GITHUB_TOKEN` is provided automatically.
+## 📄 Docs
 
-## 🛡️ Security
-
-- Non-root Docker container user
-- Spring Security stateless filter chain
-- OWASP Dependency-Check (fails on CVSS ≥ 9)
-- Trivy container vulnerability scan (weekly)
-- CodeQL SAST analysis (weekly)
-- Secrets via GitHub Actions — never hardcoded
-- K8s `readOnlyRootFilesystem`, dropped capabilities
-
-## 📦 Deploy to Kubernetes
-
-```bash
-# Staging
-kubectl apply -k k8s/overlays/staging
-
-# Production
-kubectl apply -k k8s/overlays/production
-```
+- [Architecture](docs/ARCHITECTURE.md)
+- [Runbook](docs/RUNBOOK.md)
+- [Secrets Setup](docs/SECRETS.md)
+- [Contributing](CONTRIBUTING.md)
 
 ## 📄 License
 
