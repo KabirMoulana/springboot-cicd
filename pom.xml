@@ -178,10 +178,6 @@
           <layers>
             <enabled>true</enabled>
           </layers>
-          <image>
-            <name>ghcr.io/${env.GITHUB_REPOSITORY_LC}:${project.version}</name>
-            <createdDate>now</createdDate>
-          </image>
         </configuration>
       </plugin>
 
