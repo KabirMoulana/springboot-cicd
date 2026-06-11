@@ -33,6 +33,9 @@ jobs:
           distribution: "temurin"
           cache: maven
 
+      - name: Make mvnw executable
+        run: chmod +x mvnw
+
       - name: Run unit tests
         run: ./mvnw test -B -Dsurefire.failIfNoSpecifiedTests=false
 
@@ -51,6 +54,7 @@ jobs:
         if: always()
         with:
           files: target/surefire-reports/**/*.xml
+        continue-on-error: true
 
       - name: Upload JaCoCo report artifact
         uses: actions/upload-artifact@v4
@@ -61,18 +65,20 @@ jobs:
           retention-days: 14
 
   # ─────────────────────────────────────────────
-  # Job 2: Code Quality (SonarCloud)
+  # Job 2: Code Quality (SonarCloud) — optional
   # ─────────────────────────────────────────────
   sonar:
     name: SonarCloud Analysis
     runs-on: ubuntu-latest
     needs: test
-    if: github.ref == 'refs/heads/main' || github.event_name == 'pull_request'
+    if: |
+      (github.ref == 'refs/heads/main' || github.event_name == 'pull_request') &&
+      secrets.SONAR_TOKEN != ''
     steps:
       - name: Checkout
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0   # SonarCloud needs full history
+          fetch-depth: 0
 
       - name: Set up JDK 21
         uses: actions/setup-java@v4
@@ -80,6 +86,9 @@ jobs:
           java-version: "21"
           distribution: "temurin"
           cache: maven
+
+      - name: Make mvnw executable
+        run: chmod +x mvnw
 
       - name: Cache SonarCloud packages
         uses: actions/cache@v4
@@ -102,7 +111,7 @@ jobs:
         continue-on-error: true
 
   # ─────────────────────────────────────────────
-  # Job 3: Security Scan (OWASP)
+  # Job 3: Security Scan (OWASP) — always runs
   # ─────────────────────────────────────────────
   security:
     name: OWASP Dependency Check
@@ -118,6 +127,9 @@ jobs:
           distribution: "temurin"
           cache: maven
 
+      - name: Make mvnw executable
+        run: chmod +x mvnw
+
       - name: Cache OWASP NVD data
         uses: actions/cache@v4
         with:
@@ -132,11 +144,12 @@ jobs:
           ./mvnw org.owasp:dependency-check-maven:check \
             -B \
             -DfailBuildOnCVSS=9 \
-            -DnvdApiKey=${NVD_API_KEY:-""} \
+            -DnvdApiKey="${NVD_API_KEY:-}" \
             -Dformats=HTML,JSON \
             -DretryCount=3 \
-            -DconnectionTimeout=60000
-        continue-on-error: true   # Don't block pipeline on NVD rate limits
+            -DconnectionTimeout=60000 \
+            -DautoUpdate=true
+        continue-on-error: true
 
       - name: Upload OWASP report
         uses: actions/upload-artifact@v4
@@ -147,7 +160,7 @@ jobs:
           retention-days: 30
 
   # ─────────────────────────────────────────────
-  # Job 4: Lint / Static Analysis
+  # Job 4: Lint & Compile Check
   # ─────────────────────────────────────────────
   lint:
     name: Lint & Compile Check
@@ -163,14 +176,17 @@ jobs:
           distribution: "temurin"
           cache: maven
 
-      - name: Compile (fail fast on syntax errors)
+      - name: Make mvnw executable
+        run: chmod +x mvnw
+
+      - name: Compile
         run: ./mvnw compile -B
 
-      - name: Check for TODO/FIXME in production code
+      - name: Check TODO/FIXME count
         run: |
-          count=$(grep -rn "TODO\|FIXME\|HACK\|XXX" src/main/java/ || true | wc -l)
-          echo "Found $count TODO/FIXME markers"
-          if [ "$count" -gt 20 ]; then
-            echo "Too many TODO/FIXME markers: $count (max: 20)"
+          COUNT=$(grep -rn "TODO\|FIXME\|HACK\|XXX" src/main/java/ 2>/dev/null | wc -l || echo 0)
+          echo "Found $COUNT TODO/FIXME markers"
+          if [ "$COUNT" -gt 20 ]; then
+            echo "::error::Too many TODO/FIXME markers: $COUNT (max: 20)"
             exit 1
           fi
