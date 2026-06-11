@@ -2,12 +2,15 @@ package com.devops.app.integration;
 
 import com.devops.app.dto.TaskRequest;
 import com.devops.app.model.Task;
+import com.devops.app.repository.AuditLogRepository;
 import com.devops.app.repository.TaskRepository;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.devops.app.config.TestAsyncConfig;
 import org.junit.jupiter.api.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
@@ -20,6 +23,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @AutoConfigureMockMvc
 @ActiveProfiles("test")
+@Import(TestAsyncConfig.class)
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
 @DisplayName("Task API integration tests")
 class TaskIntegrationTest {
@@ -27,9 +31,11 @@ class TaskIntegrationTest {
     @Autowired MockMvc mockMvc;
     @Autowired ObjectMapper objectMapper;
     @Autowired TaskRepository taskRepository;
+    @Autowired AuditLogRepository auditLogRepository;
 
     @BeforeEach
     void cleanDb() {
+        auditLogRepository.deleteAll();
         taskRepository.deleteAll();
     }
 

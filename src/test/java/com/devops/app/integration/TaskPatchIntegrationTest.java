@@ -5,12 +5,16 @@ import com.devops.app.dto.UpdateStatusRequest;
 import com.devops.app.model.Task;
 import com.devops.app.repository.TaskRepository;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.devops.app.config.TestAsyncConfig;
 import org.junit.jupiter.api.BeforeEach;
+import com.devops.app.config.TestAsyncConfig;
 import org.junit.jupiter.api.DisplayName;
+import com.devops.app.config.TestAsyncConfig;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
@@ -21,6 +25,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @SpringBootTest
 @AutoConfigureMockMvc
 @ActiveProfiles("test")
+@Import(TestAsyncConfig.class)
 @DisplayName("PATCH /api/tasks/{id}/status integration tests")
 class TaskPatchIntegrationTest {
 
