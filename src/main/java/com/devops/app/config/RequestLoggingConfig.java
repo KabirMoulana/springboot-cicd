@@ -18,7 +18,7 @@ public class RequestLoggingConfig {
 
     private static final Logger log = LoggerFactory.getLogger(RequestLoggingConfig.class);
 
-    @Bean
+    @Bean("requestLoggingFilter")
     public OncePerRequestFilter requestLoggingFilter() {
         return new OncePerRequestFilter() {
             @Override
