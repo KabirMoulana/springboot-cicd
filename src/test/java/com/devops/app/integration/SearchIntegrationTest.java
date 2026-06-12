@@ -18,6 +18,7 @@ import org.springframework.http.MediaType;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 
+import org.hamcrest.Matchers;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
@@ -47,7 +48,7 @@ class SearchIntegrationTest {
         mockMvc.perform(get("/api/tasks?title=fix"))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.totalElements").value(2))
-            .andExpect(jsonPath("$.content[0].title").value(org.hamcrest.Matchers.containsString("Fix")));
+            .andExpect(jsonPath("$.content[0].title").value(Matchers.containsString("Fix")));
     }
 
     @Test
