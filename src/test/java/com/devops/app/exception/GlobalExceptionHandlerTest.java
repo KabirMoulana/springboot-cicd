@@ -1,7 +1,9 @@
 package com.devops.app.exception;
 
 
+import com.devops.app.config.TestSecurityConfig;
 import com.devops.app.controller.TaskController;
+import com.devops.app.exception.GlobalExceptionHandler;
 import com.devops.app.service.TaskService;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
