@@ -30,27 +30,20 @@ jobs:
       - name: Make mvnw executable
         run: chmod +x mvnw
 
-      - name: Run all tests including integration tests
+      - name: Run unit tests
+        run: ./mvnw test -B -Dsurefire.failIfNoSpecifiedTests=false
+
+      - name: Run integration tests
         run: |
-          ./mvnw verify -B \
-            -Dsurefire.failIfNoSpecifiedTests=false \
+          ./mvnw failsafe:integration-test failsafe:verify -B \
             -Dfailsafe.failIfNoSpecifiedTests=false
 
-      - name: Publish test results
-        uses: EnricoMi/publish-unit-test-result-action@v2
-        if: always()
-        with:
-          files: |
-            target/surefire-reports/**/*.xml
-            target/failsafe-reports/**/*.xml
-        continue-on-error: true
-
-      - name: Upload test reports
+      - name: Upload test reports on failure
         uses: actions/upload-artifact@v4
-        if: always()
+        if: failure()
         with:
           name: test-reports
           path: |
             target/surefire-reports/
             target/failsafe-reports/
-          retention-days: 14
+          retention-days: 7
