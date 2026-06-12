@@ -6,6 +6,7 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 import org.hibernate.annotations.CreationTimestamp;
 import java.time.LocalDateTime;
+import java.util.HashSet;
 import java.util.Set;
 
 @Entity
@@ -36,7 +37,7 @@ public class AppUser {
     @ElementCollection(fetch = FetchType.EAGER)
     @CollectionTable(name = "user_roles", joinColumns = @JoinColumn(name = "user_id"))
     @Column(name = "role")
-    private Set<String> roles = Set.of("ROLE_USER");
+    private Set<String> roles = new HashSet<>(Set.of("ROLE_USER"));
 
     @Column(nullable = false)
     private boolean enabled = true;
